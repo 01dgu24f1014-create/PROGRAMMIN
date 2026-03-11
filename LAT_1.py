@@ -35,7 +35,7 @@ if not st.session_state['logged_in']:
     st.stop()
 
 # Butang Log Keluar di menu tepi
-st.sidebar.markdown("**👋 [Nama Anda]**") # <--- TUKAR NAMA ANDA DI SINI
+st.sidebar.markdown("### 👋 MUHAMMAD UMAR BIN ZULKARNAIN")
 if st.sidebar.button("🚪 Log Keluar"):
     st.session_state['logged_in'] = False
     st.rerun()
@@ -45,6 +45,7 @@ if st.sidebar.button("🚪 Log Keluar"):
 # ==========================================
 
 st.title("🗺️ Sistem WebGIS Poligon Data Ukur")
+st.markdown("#### *Developed by MUHAMMAD UMAR BIN ZULKARNAIN*")
 st.write("Sistem lengkap untuk visualisasi poligon, pengiraan keluasan, dan eksport data spatial.")
 
 # --- FUNGSI PENGIRAAN BERING & JARAK ---
@@ -161,7 +162,7 @@ if uploaded_file is not None and 'df' in locals():
         tab_plotly, tab_gis = st.tabs(["📊 Pelan 2D & Metrik", "🌍 Peta WebGIS (Satelit)"])
         
         # ==========================================
-        # --- PAPARAN TAB 1: PLOTLY (SEPERTI GAMBAR KANAN) ---
+        # --- PAPARAN TAB 1: PLOTLY (GAMBAR KANAN) ---
         # ==========================================
         with tab_plotly:
             # Bahagian Kad Metrik
