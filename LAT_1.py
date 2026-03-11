@@ -208,7 +208,7 @@ if uploaded_file is not None and 'df' in locals():
         
         st.markdown("---")
         st.write("**Togol Visualisasi Peta GIS:**")
-        show_sat = st.checkbox("🌍 Paparkan Imej Satelit", value=True)
+        # Checkbox Imej Satelit dibuang kerana Layer Control telah ditambah pada peta
         show_stn = st.checkbox("🏷️ Paparkan Label Stesen", value=True)
         show_bearing = st.checkbox("📐 Paparkan Bering & Jarak", value=True)
         
@@ -337,21 +337,30 @@ if uploaded_file is not None and 'df' in locals():
             gdf_wgs84 = gdf.to_crs(epsg=4326)
             lat_tengah, lon_tengah = gdf_wgs84.centroid.y.iloc[0], gdf_wgs84.centroid.x.iloc[0]
             
-            m = folium.Map(location=[lat_tengah, lon_tengah], zoom_start=tahap_zoom, control_scale=True, max_zoom=24)
+            m = folium.Map(location=[lat_tengah, lon_tengah], zoom_start=tahap_zoom, control_scale=True, max_zoom=24, tiles=None)
             
-            if show_sat:
-                folium.TileLayer(
-                    tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google Hybrid', max_zoom=24, max_native_zoom=21
-                ).add_to(m)
-            else:
-                folium.TileLayer('OpenStreetMap').add_to(m)
-                
+            # --- TIGA JENIS LAYER PETA KAWALAN ---
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Google Hybrid (Satelit)', max_zoom=24, max_native_zoom=21
+            ).add_to(m)
+            
+            folium.TileLayer(
+                'OpenStreetMap', name='Peta Jalan (OSM)', max_zoom=24
+            ).add_to(m)
+            
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', attr='Google', name='Google Map Biasa', max_zoom=24, max_native_zoom=21
+            ).add_to(m)
+            
+            # Kumpulan layer untuk Data Ukur membolehkan ia di "on/off" dalam Layer Control
+            data_survey_layer = folium.FeatureGroup(name="Data Survey")
+            
             html_lot = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Lot Poligon<br><b>Luas:</b> {keluasan:.3f} m²<br><b>Perimeter:</b> {perimeter:.3f} m</div>"
             folium.GeoJson(
                 gdf_wgs84, 
                 style_function=lambda x: {'fillColor': warna_poligon, 'color': 'none', 'fillOpacity': 0.3},
                 tooltip=folium.Tooltip(html_lot)
-            ).add_to(m)
+            ).add_to(data_survey_layer) # Ditambah ke dalam group
             
             for i in range(len(df)):
                 e1, n1 = df.iloc[i]['E'], df.iloc[i]['N']
@@ -371,23 +380,21 @@ if uploaded_file is not None and 'df' in locals():
                     locations=[[lat1, lon1], [lat2, lon2]], 
                     color='#0000ff', weight=4, opacity=0.8,
                     tooltip=folium.Tooltip(html_line)
-                ).add_to(m)
+                ).add_to(data_survey_layer)
                 
                 if show_stn:
-                    # --- KEMASKINI TOOLTIP STESEN ---
                     html_stn = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Stesen<br><b>Label:</b> {stn_name}<br><b>E:</b> {e1}<br><b>N:</b> {n1}</div>"
                     
                     folium.CircleMarker(
                         location=[lat1, lon1], radius=saiz_marker / 4, color='red', fill=True, fill_color='red',
                         tooltip=folium.Tooltip(html_stn)
-                    ).add_to(m)
+                    ).add_to(data_survey_layer)
                     
-                    # Tambah tooltip pada label (Marker) juga supaya bila mouse lalu teks pun keluar info
                     folium.Marker(
                         location=[lat1, lon1], 
                         icon=folium.DivIcon(html=f'<div style="font-weight:bold; color:white; text-shadow: 1px 1px 2px black; font-size: 14pt; margin-left:10px;">{stn_name}</div>'),
                         tooltip=folium.Tooltip(html_stn)
-                    ).add_to(m)
+                    ).add_to(data_survey_layer)
                 
                 if show_bearing:
                     mid_e, mid_n = (e1 + e2)/2, (n1 + n2)/2
@@ -399,6 +406,12 @@ if uploaded_file is not None and 'df' in locals():
                         location=[mid_lat, mid_lon], 
                         icon=folium.DivIcon(html=f'<div style="color:yellow; text-shadow: 1px 1px 2px black; font-size: {saiz_font}pt; text-align:center; width: 100px; margin-left:-50px;">{j:.3f}m<br>{format_bering(b)}</div>'),
                         tooltip=folium.Tooltip(html_bering)
-                    ).add_to(m)
+                    ).add_to(data_survey_layer)
+
+            # Masukkan seluruh Kumpulan Data ke dalam Peta
+            data_survey_layer.add_to(m)
+            
+            # --- TAMPILKAN MENU KAWALAN LAYER DI PENJURU ---
+            folium.LayerControl(position='topright').add_to(m)
 
             st_folium(m, use_container_width=True, height=500)
