@@ -48,12 +48,12 @@ if st.sidebar.button("🚪 Log Keluar"):
 custom_header = """
 <style>
 .header-container {
-    background-color: #121826; /* Warna latar belakang kotak gelap */
+    background-color: #121826;
     padding: 50px 30px 30px 30px;
-    border-radius: 15px; /* Bucu bulat */
-    text-align: center; /* Susun teks di tengah */
+    border-radius: 15px;
+    text-align: center;
     position: relative;
-    border-bottom: 4px solid #F6D365; /* Garisan kuning di bahagian bawah */
+    border-bottom: 4px solid #F6D365;
     margin-bottom: 30px;
     box-shadow: 0px 5px 15px rgba(0,0,0,0.2);
 }
@@ -158,7 +158,7 @@ if uploaded_file is not None and 'df' in locals():
     poly_geom = Polygon(zip(df['E'], df['N']))
     gdf = gpd.GeoDataFrame(index=[0], geometry=[poly_geom], crs=f"EPSG:{epsg_code}")
     keluasan = gdf.area.iloc[0]
-    perimeter = sum(df_display['Jarak (m)']) # Kira Perimeter (Jumlah Jarak)
+    perimeter = sum(df_display['Jarak (m)']) 
     
     col_tools, col_map = st.columns([1, 3])
     
@@ -204,91 +204,94 @@ if uploaded_file is not None and 'df' in locals():
         
     with col_map:
         st.subheader("3. Analisis Ruangan (Spatial Analysis)")
-        
-        # BINA TAB (TEB) UNTUK TUKAR-TUKAR PAPARAN
         tab_plotly, tab_gis = st.tabs(["📊 Pelan 2D & Metrik", "🌍 Peta WebGIS (Satelit)"])
         
         # ==========================================
         # --- PAPARAN TAB 1: PLOTLY (GAMBAR KANAN) ---
         # ==========================================
         with tab_plotly:
-            # Bahagian Kad Metrik
             m1, m2, m3 = st.columns(3)
             m1.metric("Luas", f"{keluasan:.2f} m²")
             m2.metric("Perimeter", f"{perimeter:.2f} m")
             m3.metric("Bilangan Stesen", f"{len(df)}")
             
-            # Bina Figure Plotly
             fig = go.Figure()
             
-            # 1. Garisan Sempadan (Tutup Poligon)
             e_closed = list(df['E']) + [df['E'].iloc[0]]
             n_closed = list(df['N']) + [df['N'].iloc[0]]
+            stn_closed = list(df['STN']) + [df['STN'].iloc[0]]
             
+            # --- 1. Teks Tooltip untuk Stesen & Sempadan (Plotly) ---
+            hover_texts = []
+            for idx in range(len(e_closed)):
+                if idx < len(df):
+                    j = df_display['Jarak (m)'].iloc[idx]
+                    b = df_display['Bering'].iloc[idx]
+                    next_stn = df['STN'].iloc[(idx+1)%len(df)]
+                    hover_texts.append(f"<b>Kategori:</b> Stesen<br><b>Label:</b> {stn_closed[idx]}<br><b>Koordinat:</b> {e_closed[idx]}, {n_closed[idx]}<br><b>Arah ke {next_stn}:</b> {j:.3f}m | {b}")
+                else:
+                    hover_texts.append(f"<b>Kategori:</b> Stesen<br><b>Label:</b> {stn_closed[idx]}<br><b>Koordinat:</b> {e_closed[idx]}, {n_closed[idx]}")
+
+            # Plot Garisan Sempadan & Titik Stesen
             fig.add_trace(go.Scatter(
                 x=e_closed, y=n_closed, 
                 mode='lines+markers',
                 line=dict(color='black', width=2),
                 marker=dict(color='red', size=12),
-                name='Sempadan'
+                name='Sempadan',
+                text=hover_texts,
+                hoverinfo='text' # Mengaktifkan tooltip custom kita
             ))
             
-            # 2. Masukkan Label Stesen
+            # --- 2. Teks Tooltip untuk Lot Poligon (Bila mouse atas lot) ---
+            fig.add_trace(go.Scatter(
+                x=e_closed, y=n_closed,
+                fill='toself',
+                fillcolor='rgba(0, 0, 255, 0.05)', # Warna biru cair sangat (lutsinar)
+                line=dict(color='rgba(255,255,255,0)'),
+                name='Lot',
+                text=f"<b>Kategori:</b> Lot Poligon<br><b>Luas:</b> {keluasan:.3f} m²<br><b>Perimeter:</b> {perimeter:.3f} m",
+                hoverinfo='text'
+            ))
+            
             for i in range(len(df)):
                 fig.add_annotation(
                     x=df['E'].iloc[i], y=df['N'].iloc[i],
                     text=f"<b>{df['STN'].iloc[i]}</b>",
-                    showarrow=False,
-                    xshift=15, yshift=15,
+                    showarrow=False, xshift=15, yshift=15,
                     font=dict(color="blue", size=16)
                 )
                 
-            # 3. Masukkan Label Bering & Jarak
             for i in range(len(df)):
                 e1, n1 = df.iloc[i]['E'], df.iloc[i]['N']
                 e2, n2 = df.iloc[(i+1) % len(df)]['E'], df.iloc[(i+1) % len(df)]['N']
                 mid_e, mid_n = (e1 + e2)/2, (n1 + n2)/2
-                
                 j = df_display['Jarak (m)'].iloc[i]
                 b = df_display['Bering'].iloc[i]
                 
-                # Kira sudut teks supaya selari dengan garisan
                 dx, dy = e2 - e1, n2 - n1
                 angle = math.degrees(math.atan2(dy, dx))
                 if angle > 90: angle -= 180
                 elif angle < -90: angle += 180
                 
                 fig.add_annotation(
-                    x=mid_e, y=mid_n,
-                    text=f"<b>{b}<br>{j:.3f}m</b>",
-                    showarrow=False,
-                    textangle=-angle, # Sengetkan teks
-                    font=dict(color="darkred", size=12)
+                    x=mid_e, y=mid_n, text=f"<b>{b}<br>{j:.3f}m</b>", showarrow=False, textangle=-angle, font=dict(color="darkred", size=12)
                 )
 
-            # 4. Kotak LUAS berwarna Hijau di tengah poligon
             pusat = poly_geom.centroid
             fig.add_annotation(
-                x=pusat.x, y=pusat.y,
-                text=f"<b>LUAS<br>{keluasan:.2f} m²</b>",
-                showarrow=False,
-                font=dict(color="green", size=18),
-                bgcolor="white",
-                bordercolor="green",
-                borderwidth=2,
-                borderpad=5
+                x=pusat.x, y=pusat.y, text=f"<b>LUAS<br>{keluasan:.2f} m²</b>",
+                showarrow=False, font=dict(color="green", size=18), bgcolor="white",
+                bordercolor="green", borderwidth=2, borderpad=5
             )
 
-            # 5. Kemaskan Paparan Grid (Aspect Ratio = 1:1)
             fig.update_layout(
                 yaxis=dict(scaleanchor="x", scaleratio=1, showgrid=True, gridcolor='lightgrey', griddash='dot'),
                 xaxis=dict(showgrid=True, gridcolor='lightgrey', griddash='dot'),
-                plot_bgcolor='white',
-                margin=dict(l=10, r=10, t=30, b=10),
-                height=500
+                plot_bgcolor='white', margin=dict(l=10, r=10, t=30, b=10), height=500,
+                showlegend=False
             )
 
-            # Keluarkan Plotly ke Streamlit
             st.plotly_chart(fig, use_container_width=True)
 
         
@@ -308,24 +311,61 @@ if uploaded_file is not None and 'df' in locals():
             else:
                 folium.TileLayer('OpenStreetMap').add_to(m)
                 
-            folium.GeoJson(gdf_wgs84, style_function=lambda x: {'fillColor': '#0000ff', 'color': '#0000ff', 'weight': 3, 'fillOpacity': 0.3}).add_to(m)
+            # --- 1. Tooltip untuk Lot (Poligon) ---
+            html_lot = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Lot Poligon<br><b>Luas:</b> {keluasan:.3f} m²<br><b>Perimeter:</b> {perimeter:.3f} m</div>"
+            folium.GeoJson(
+                gdf_wgs84, 
+                style_function=lambda x: {'fillColor': '#0000ff', 'color': 'none', 'fillOpacity': 0.3},
+                tooltip=folium.Tooltip(html_lot)
+            ).add_to(m)
             
             for i in range(len(df)):
                 e1, n1 = df.iloc[i]['E'], df.iloc[i]['N']
+                e2, n2 = df.iloc[(i+1) % len(df)]['E'], df.iloc[(i+1) % len(df)]['N']
                 stn_name = str(df.iloc[i]['STN'])
-                pt = gpd.GeoSeries([Point(e1, n1)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
-                pt_lat, pt_lon = pt.y.iloc[0], pt.x.iloc[0]
+                
+                # Transform point semasa
+                pt1 = gpd.GeoSeries([Point(e1, n1)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
+                lat1, lon1 = pt1.y.iloc[0], pt1.x.iloc[0]
+                
+                # Transform point seterusnya (untuk lukis garisan ber-tooltip)
+                pt2 = gpd.GeoSeries([Point(e2, n2)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
+                lat2, lon2 = pt2.y.iloc[0], pt2.x.iloc[0]
+                
+                j, b = kira_bering_jarak(e1, n1, e2, n2)
+                
+                # --- 2. Tooltip untuk Garisan Sempadan ---
+                html_line = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Sempadan<br><b>Label:</b> {stn_name}<br><b>Jarak:</b> {j:.3f}m<br><b>Bering:</b> {format_bering(b)}</div>"
+                folium.PolyLine(
+                    locations=[[lat1, lon1], [lat2, lon2]], 
+                    color='#0000ff', weight=4, opacity=0.8,
+                    tooltip=folium.Tooltip(html_line)
+                ).add_to(m)
                 
                 if show_stn:
-                    folium.CircleMarker(location=[pt_lat, pt_lon], radius=4, color='red', fill=True, fill_color='red').add_to(m)
-                    folium.Marker(location=[pt_lat, pt_lon], icon=folium.DivIcon(html=f'<div style="font-weight:bold; color:white; text-shadow: 1px 1px 2px black; font-size: 14pt;">{stn_name}</div>')).add_to(m)
+                    # --- 3. Tooltip untuk Titik Stesen ---
+                    html_stn = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Stesen<br><b>Label:</b> {stn_name}<br><b>E:</b> {e1}<br><b>N:</b> {n1}</div>"
+                    folium.CircleMarker(
+                        location=[lat1, lon1], radius=5, color='red', fill=True, fill_color='red',
+                        tooltip=folium.Tooltip(html_stn)
+                    ).add_to(m)
+                    
+                    folium.Marker(
+                        location=[lat1, lon1], 
+                        icon=folium.DivIcon(html=f'<div style="font-weight:bold; color:white; text-shadow: 1px 1px 2px black; font-size: 14pt; margin-left:10px;">{stn_name}</div>')
+                    ).add_to(m)
                 
                 if show_bearing:
-                    e2, n2 = df.iloc[(i+1) % len(df)]['E'], df.iloc[(i+1) % len(df)]['N']
-                    j, b = kira_bering_jarak(e1, n1, e2, n2)
                     mid_e, mid_n = (e1 + e2)/2, (n1 + n2)/2
                     mid_pt = gpd.GeoSeries([Point(mid_e, mid_n)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
                     mid_lat, mid_lon = mid_pt.y.iloc[0], mid_pt.x.iloc[0]
-                    folium.Marker(location=[mid_lat, mid_lon], icon=folium.DivIcon(html=f'<div style="color:yellow; text-shadow: 1px 1px 2px black; font-size: 10pt; text-align:center; width: 100px; margin-left:-50px;">{j:.3f}m<br>{format_bering(b)}</div>')).add_to(m)
+                    
+                    # --- 4. Tooltip untuk Label Bering ---
+                    html_bering = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Bering & Jarak<br><b>Jarak:</b> {j:.3f}m<br><b>Bering:</b> {format_bering(b)}</div>"
+                    folium.Marker(
+                        location=[mid_lat, mid_lon], 
+                        icon=folium.DivIcon(html=f'<div style="color:yellow; text-shadow: 1px 1px 2px black; font-size: 10pt; text-align:center; width: 100px; margin-left:-50px;">{j:.3f}m<br>{format_bering(b)}</div>'),
+                        tooltip=folium.Tooltip(html_bering)
+                    ).add_to(m)
 
             st_folium(m, use_container_width=True, height=500)
