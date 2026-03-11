@@ -35,9 +35,9 @@ with col1:
     st.subheader("1. Muat Naik & Tetapan")
     uploaded_file = st.file_uploader("Pilih fail CSV (Kolum: STN, E, N)", type=["csv"])
     
-    # EPSG sangat penting untuk Easting/Northing overlay ke Satelit
-    epsg_code = st.text_input("Kod EPSG Sistem Koordinat Anda", value="3386", 
-                              help="Contoh: 3386 untuk Perak Cassini, 3168 untuk Semenanjung MRSO, 32647 untuk UTM 47N")
+    # --- KEMAS KINI: Tukar value default kepada 4390 (Johor Grid) ---
+    epsg_code = st.text_input("Kod EPSG Sistem Koordinat Anda", value="4390", 
+                              help="Lalai: 4390 untuk Kertau / Johor Grid. Ubah mengikut keperluan.")
 
 with col2:
     if uploaded_file is not None:
@@ -75,10 +75,11 @@ st.divider()
 if uploaded_file is not None and 'df' in locals():
     # --- PROSES GEOPANDAS (TASK 1 & 2) ---
     poly_geom = Polygon(zip(df['E'], df['N']))
+    
+    # Kod ini akan auto-convert titik anda menggunakan nilai EPSG (4390)
     gdf = gpd.GeoDataFrame(index=[0], geometry=[poly_geom], crs=f"EPSG:{epsg_code}")
     keluasan = gdf.area.iloc[0]
     
-    # Ini adalah 'col_map' yang sistem cari tadi
     col_tools, col_map = st.columns([1, 3])
     
     with col_tools:
@@ -98,6 +99,8 @@ if uploaded_file is not None and 'df' in locals():
         st.markdown("---")
         # TASK 2: Export Data GeoJSON
         st.write("**Eksport Data (Task 2):**")
+        
+        # --- PROSES CONVERT KE WGS 84 (EPSG 4326) ---
         gdf_wgs84 = gdf.to_crs(epsg=4326)
         geojson_data = gdf_wgs84.to_json()
         
@@ -134,6 +137,7 @@ if uploaded_file is not None and 'df' in locals():
             e1, n1 = df.iloc[i]['E'], df.iloc[i]['N']
             stn_name = str(df.iloc[i]['STN'])
             
+            # --- CONVERT TITIK LABEL KE WGS 84 ---
             pt = gpd.GeoSeries([Point(e1, n1)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
             pt_lat = pt.y.iloc[0]
             pt_lon = pt.x.iloc[0]
@@ -152,6 +156,8 @@ if uploaded_file is not None and 'df' in locals():
                 j, b = kira_bering_jarak(e1, n1, e2, n2)
                 
                 mid_e, mid_n = (e1 + e2)/2, (n1 + n2)/2
+                
+                # --- CONVERT TITIK BERING/JARAK KE WGS 84 ---
                 mid_pt = gpd.GeoSeries([Point(mid_e, mid_n)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
                 mid_lat, mid_lon = mid_pt.y.iloc[0], mid_pt.x.iloc[0]
                 
