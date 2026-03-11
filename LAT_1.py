@@ -35,6 +35,7 @@ if not st.session_state['logged_in']:
     st.stop()
 
 # Butang Log Keluar di menu tepi
+st.sidebar.markdown("**👋 [Nama Anda]**") # <--- TUKAR NAMA ANDA DI SINI
 if st.sidebar.button("🚪 Log Keluar"):
     st.session_state['logged_in'] = False
     st.rerun()
