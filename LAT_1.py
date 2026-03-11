@@ -115,7 +115,8 @@ if uploaded_file is not None and 'df' in locals():
         lon_tengah = pusat_wgs84.x.iloc[0]
         
         # Bina peta Folium (TUTUP peta lalai dengan tiles=None untuk elak bertindih)
-        m = folium.Map(location=[lat_tengah, lon_tengah], zoom_start=18, control_scale=True, tiles=None)
+        # --- TAMBAH: max_zoom=24 untuk benarkan zoom lebih dekat pada peta asas ---
+        m = folium.Map(location=[lat_tengah, lon_tengah], zoom_start=18, control_scale=True, tiles=None, max_zoom=24)
         
         # TASK 3 & 4: Overlay Satelit (Google Hybrid)
         if show_sat:
@@ -123,7 +124,8 @@ if uploaded_file is not None and 'df' in locals():
                 tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
                 attr='Google Hybrid',
                 name='Google Satellite',
-                max_zoom=20
+                max_zoom=24,           # --- TAMBAH: limit zoom maksimum ---
+                max_native_zoom=21     # --- TAMBAH: limit resolusi imej maksimum Google ---
             ).add_to(m)
         else:
             folium.TileLayer('OpenStreetMap').add_to(m)
