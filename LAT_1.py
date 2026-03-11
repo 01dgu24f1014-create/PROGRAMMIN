@@ -6,8 +6,44 @@ import folium
 from streamlit_folium import st_folium
 import math
 
-# Konfigurasi Halaman
+# Konfigurasi Halaman (Mesti diletak paling atas)
 st.set_page_config(page_title="Sistem WebGIS Ukur", layout="wide", page_icon="🗺️")
+
+# ==========================================
+# --- SISTEM LOG MASUK (LOGIN PENGGUNA) ---
+# ==========================================
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
+if not st.session_state['logged_in']:
+    st.title("🔒 Log Masuk Sistem WebGIS")
+    st.write("Sila masukkan ID dan Kata Laluan untuk mencari lot dan mengakses paparan.")
+    
+    with st.form("login_form"):
+        user_id = st.text_input("ID Pengguna")
+        password = st.text_input("Kata Laluan", type="password")
+        submit_button = st.form_submit_button("Log Masuk")
+        
+        if submit_button:
+            # TUKAR ID DAN PASSWORD DI SINI:
+            if user_id == "admin" and password == "12345":
+                st.session_state['logged_in'] = True
+                st.rerun() # Refresh semula muka surat
+            else:
+                st.error("Ralat: ID Pengguna atau Kata Laluan tidak sah. Cuba lagi.")
+    
+    # Berhenti di sini jika belum login. Kod bawah tidak akan dibaca.
+    st.stop()
+
+# Tambah butang Log Keluar di menu tepi
+if st.sidebar.button("🚪 Log Keluar"):
+    st.session_state['logged_in'] = False
+    st.rerun()
+
+
+# ==========================================
+# --- KOD ASAL WEBGIS BERMULA DI SINI ---
+# ==========================================
 
 st.title("🗺️ Sistem WebGIS Poligon Data Ukur")
 st.write("Sistem lengkap untuk visualisasi poligon, pengiraan keluasan, dan eksport data spatial.")
