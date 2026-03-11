@@ -3,3 +3,5 @@ pandas
 plotly
 geopandas
 shapely
+folium
+streamlit-folium
