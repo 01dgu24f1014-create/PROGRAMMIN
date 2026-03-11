@@ -13,6 +13,14 @@ st.set_page_config(page_title="Sistem WebGIS Ukur", layout="wide", page_icon="�
 # ==========================================
 # --- SISTEM LOG MASUK (LOGIN PENGGUNA) ---
 # ==========================================
+# Simpan pangkalan data pengguna sementara
+if 'users_db' not in st.session_state:
+    st.session_state['users_db'] = {
+        "admin": {"name": "MUHAMMAD UMAR BIN ZULKARNAIN", "password": "12345"},
+        "fakhrulis": {"name": "FAKHRULIS", "password": "12345"},
+        "Aniqs": {"name": "ANIQS", "password": "12345"}
+    }
+
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
@@ -26,9 +34,10 @@ if not st.session_state['logged_in']:
         submit_button = st.form_submit_button("Log Masuk")
         
         if submit_button:
-            # --- TAMBAH ID BARU DI SINI ---
-            if user_id in ["admin", "fakhrulis", "Aniqs"] and password == "12345":
+            # Semak dengan database pengguna
+            if user_id in st.session_state['users_db'] and password == st.session_state['users_db'][user_id]['password']:
                 st.session_state['logged_in'] = True
+                st.session_state['current_user'] = user_id # Simpan ID yang sedang login
                 st.rerun() 
             else:
                 st.error("Ralat: ID Pengguna atau Kata Laluan tidak sah. Cuba lagi.")
@@ -38,16 +47,32 @@ if not st.session_state['logged_in']:
 # ==========================================
 # --- MENU TEPI (SIDEBAR) ---
 # ==========================================
-st.sidebar.markdown("### 👋 MUHAMMAD UMAR BIN ZULKARNAIN")
+# Ambil nama penuh berdasarkan ID yang sedang login
+current_user = st.session_state['current_user']
+user_full_name = st.session_state['users_db'][current_user]['name']
+
+st.sidebar.markdown(f"### 👋 {user_full_name}")
 st.sidebar.markdown("---")
 
-# --- TAMBAH KAWALAN UI SEPERTI DALAM GAMBAR ---
+# --- KAWALAN UI ---
 saiz_marker = st.sidebar.slider("Saiz Marker Stesen", min_value=1, max_value=50, value=22)
 saiz_font = st.sidebar.slider("Saiz Bearing/Jarak", min_value=5, max_value=30, value=12)
 tahap_zoom = st.sidebar.slider("Tahap Zoom", min_value=10, max_value=24, value=19)
-warna_poligon = st.sidebar.color_picker("Warna Poligon", "#A020F0") # Default warna ungu
+warna_poligon = st.sidebar.color_picker("Warna Poligon", "#A020F0")
 
 st.sidebar.markdown("---")
+
+# --- MENU TUKAR KATA LALUAN (DI BAWAH) ---
+with st.sidebar.expander("🔑 Tukar Kata Laluan"):
+    new_password = st.text_input("Kata Laluan Baru", type="password")
+    if st.button("Simpan"):
+        if new_password:
+            st.session_state['users_db'][current_user]['password'] = new_password
+            st.success("Berjaya ditukar!")
+        else:
+            st.warning("Masukkan kata laluan.")
+
+st.sidebar.markdown("<br>", unsafe_allow_html=True) # Jarak kosong
 
 if st.sidebar.button("🚪 Log Keluar"):
     st.session_state['logged_in'] = False
@@ -234,7 +259,6 @@ if uploaded_file is not None and 'df' in locals():
             n_closed = list(df['N']) + [df['N'].iloc[0]]
             stn_closed = list(df['STN']) + [df['STN'].iloc[0]]
             
-            # --- 1. Teks Tooltip untuk Stesen & Sempadan (Plotly) ---
             hover_texts = []
             for idx in range(len(e_closed)):
                 if idx < len(df):
@@ -245,18 +269,16 @@ if uploaded_file is not None and 'df' in locals():
                 else:
                     hover_texts.append(f"<b>Kategori:</b> Stesen<br><b>Label:</b> {stn_closed[idx]}<br><b>Koordinat:</b> {e_closed[idx]}, {n_closed[idx]}")
 
-            # Plot Garisan Sempadan & Titik Stesen (Sambung dengan saiz_marker dari sidebar)
             fig.add_trace(go.Scatter(
                 x=e_closed, y=n_closed, 
                 mode='lines+markers',
                 line=dict(color='black', width=2),
-                marker=dict(color='red', size=saiz_marker), # Guna variabel saiz_marker
+                marker=dict(color='red', size=saiz_marker), 
                 name='Sempadan',
                 text=hover_texts,
                 hoverinfo='text'
             ))
             
-            # --- 2. Teks Tooltip untuk Lot Poligon ---
             fig.add_trace(go.Scatter(
                 x=e_closed, y=n_closed,
                 fill='toself',
@@ -287,7 +309,6 @@ if uploaded_file is not None and 'df' in locals():
                 if angle > 90: angle -= 180
                 elif angle < -90: angle += 180
                 
-                # Guna variabel saiz_font dari sidebar
                 fig.add_annotation(
                     x=mid_e, y=mid_n, text=f"<b>{b}<br>{j:.3f}m</b>", showarrow=False, textangle=-angle, font=dict(color="darkred", size=saiz_font)
                 )
@@ -316,7 +337,6 @@ if uploaded_file is not None and 'df' in locals():
             gdf_wgs84 = gdf.to_crs(epsg=4326)
             lat_tengah, lon_tengah = gdf_wgs84.centroid.y.iloc[0], gdf_wgs84.centroid.x.iloc[0]
             
-            # Guna variabel tahap_zoom dari sidebar
             m = folium.Map(location=[lat_tengah, lon_tengah], zoom_start=tahap_zoom, control_scale=True, max_zoom=24)
             
             if show_sat:
@@ -326,11 +346,9 @@ if uploaded_file is not None and 'df' in locals():
             else:
                 folium.TileLayer('OpenStreetMap').add_to(m)
                 
-            # --- 1. Tooltip & Warna untuk Lot (Poligon) ---
             html_lot = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Lot Poligon<br><b>Luas:</b> {keluasan:.3f} m²<br><b>Perimeter:</b> {perimeter:.3f} m</div>"
             folium.GeoJson(
                 gdf_wgs84, 
-                # Guna variabel warna_poligon dari sidebar
                 style_function=lambda x: {'fillColor': warna_poligon, 'color': 'none', 'fillOpacity': 0.3},
                 tooltip=folium.Tooltip(html_lot)
             ).add_to(m)
@@ -340,17 +358,14 @@ if uploaded_file is not None and 'df' in locals():
                 e2, n2 = df.iloc[(i+1) % len(df)]['E'], df.iloc[(i+1) % len(df)]['N']
                 stn_name = str(df.iloc[i]['STN'])
                 
-                # Transform point semasa
                 pt1 = gpd.GeoSeries([Point(e1, n1)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
                 lat1, lon1 = pt1.y.iloc[0], pt1.x.iloc[0]
                 
-                # Transform point seterusnya (untuk lukis garisan ber-tooltip)
                 pt2 = gpd.GeoSeries([Point(e2, n2)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
                 lat2, lon2 = pt2.y.iloc[0], pt2.x.iloc[0]
                 
                 j, b = kira_bering_jarak(e1, n1, e2, n2)
                 
-                # --- 2. Tooltip untuk Garisan Sempadan ---
                 html_line = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Sempadan<br><b>Label:</b> {stn_name}<br><b>Jarak:</b> {j:.3f}m<br><b>Bering:</b> {format_bering(b)}</div>"
                 folium.PolyLine(
                     locations=[[lat1, lon1], [lat2, lon2]], 
@@ -359,17 +374,19 @@ if uploaded_file is not None and 'df' in locals():
                 ).add_to(m)
                 
                 if show_stn:
-                    # --- 3. Tooltip & Saiz untuk Titik Stesen ---
+                    # --- KEMASKINI TOOLTIP STESEN ---
                     html_stn = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Stesen<br><b>Label:</b> {stn_name}<br><b>E:</b> {e1}<br><b>N:</b> {n1}</div>"
+                    
                     folium.CircleMarker(
-                        # Gunakan saiz_marker / 4 supaya saiz bersesuaian dengan skala Folium
                         location=[lat1, lon1], radius=saiz_marker / 4, color='red', fill=True, fill_color='red',
                         tooltip=folium.Tooltip(html_stn)
                     ).add_to(m)
                     
+                    # Tambah tooltip pada label (Marker) juga supaya bila mouse lalu teks pun keluar info
                     folium.Marker(
                         location=[lat1, lon1], 
-                        icon=folium.DivIcon(html=f'<div style="font-weight:bold; color:white; text-shadow: 1px 1px 2px black; font-size: 14pt; margin-left:10px;">{stn_name}</div>')
+                        icon=folium.DivIcon(html=f'<div style="font-weight:bold; color:white; text-shadow: 1px 1px 2px black; font-size: 14pt; margin-left:10px;">{stn_name}</div>'),
+                        tooltip=folium.Tooltip(html_stn)
                     ).add_to(m)
                 
                 if show_bearing:
@@ -377,11 +394,9 @@ if uploaded_file is not None and 'df' in locals():
                     mid_pt = gpd.GeoSeries([Point(mid_e, mid_n)], crs=f"EPSG:{epsg_code}").to_crs(epsg=4326)
                     mid_lat, mid_lon = mid_pt.y.iloc[0], mid_pt.x.iloc[0]
                     
-                    # --- 4. Tooltip & Saiz untuk Label Bering ---
                     html_bering = f"<div style='font-family: Arial; font-size: 13px;'><b>Kategori:</b> Bering & Jarak<br><b>Jarak:</b> {j:.3f}m<br><b>Bering:</b> {format_bering(b)}</div>"
                     folium.Marker(
                         location=[mid_lat, mid_lon], 
-                        # Gunakan pembolehubah saiz_font yang ditarik dari sidebar
                         icon=folium.DivIcon(html=f'<div style="color:yellow; text-shadow: 1px 1px 2px black; font-size: {saiz_font}pt; text-align:center; width: 100px; margin-left:-50px;">{j:.3f}m<br>{format_bering(b)}</div>'),
                         tooltip=folium.Tooltip(html_bering)
                     ).add_to(m)
