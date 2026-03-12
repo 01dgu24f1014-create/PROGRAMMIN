@@ -6,66 +6,9 @@ import folium
 from streamlit_folium import st_folium
 import plotly.graph_objects as go
 import math
-import base64
 
 # Konfigurasi Halaman (Mesti diletak paling atas)
 st.set_page_config(page_title="Sistem WebGIS Ukur", layout="wide", page_icon="🗺️")
-
-# ==========================================
-# --- FUNGSI LATAR BELAKANG VIDEO ---
-# ==========================================
-@st.cache_data
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-def set_video_background(video_file):
-    try:
-        bin_str = get_base64_of_bin_file(video_file)
-        video_html = f'''
-        <style>
-        /* Jadikan background utama dan header Streamlit transparent */
-        [data-testid="stAppViewContainer"] {{
-            background-color: transparent !important;
-        }}
-        [data-testid="stHeader"] {{
-            background-color: transparent !important;
-        }}
-        /* Jadikan sidebar sedikit gelap supaya teks masih boleh dibaca */
-        [data-testid="stSidebar"] {{
-            background-color: rgba(18, 24, 38, 0.7) !important;
-        }}
-        /* Styling untuk video latar belakang */
-        #video-background {{
-            position: fixed;
-            right: 0;
-            bottom: 0;
-            min-width: 100vw;
-            min-height: 100vh;
-            width: auto;
-            height: auto;
-            z-index: -100;
-            object-fit: cover;
-        }}
-        /* Tambah sikit kotak gelap pada kawasan utama (pilihan) supaya teks putih lebih jelas */
-        .block-container {{
-            background-color: rgba(18, 24, 38, 0.6);
-            border-radius: 15px;
-            padding: 2rem;
-            margin-top: 2rem;
-        }}
-        </style>
-        <video autoplay loop muted playsinline id="video-background">
-            <source src="data:video/mp4;base64,{bin_str}" type="video/mp4">
-        </video>
-        '''
-        st.markdown(video_html, unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.warning("Fail video latar belakang tidak dijumpai. Pastikan 'nebula.3840x2160.mp4' berada di dalam folder yang sama.")
-
-# Panggil fungsi latar belakang video
-set_video_background('nebula.3840x2160.mp4')
 
 # ==========================================
 # --- SISTEM LOG MASUK (LOGIN PENGGUNA) ---
@@ -150,7 +93,7 @@ custom_header = """
     position: relative;
     border-bottom: 4px solid #F6D365;
     margin-bottom: 30px;
-    box-shadow: 0px 5px 15px rgba(0,0,0,0.5);
+    box-shadow: 0px 5px 15px rgba(0,0,0,0.2);
 }
 .main-title {
     color: #FFFFFF;
@@ -181,8 +124,8 @@ custom_header = """
 </style>
 
 <div class="header-container">
-    <h1 class="main-title">🛰️ PUO WEB-GIS PRO-PLOTTER</h1>
-    <p class="sub-title">Precision Mapping & Visual Healing Experience</p>
+    <h1 class="main-title">SISTEM SURVEY LOT</h1>
+    <p class="sub-title">Politeknik Ungku Omar | Jabatan Kejuruteraan Awam</p>
     <div class="developer-credit">DEVELOPED BY: MUHAMMAD UMAR BIN ZULKARNAIN</div>
 </div>
 """
@@ -265,6 +208,7 @@ if uploaded_file is not None and 'df' in locals():
         
         st.markdown("---")
         st.write("**Togol Visualisasi Peta GIS:**")
+        # Checkbox Imej Satelit dibuang kerana Layer Control telah ditambah pada peta
         show_stn = st.checkbox("🏷️ Paparkan Label Stesen", value=True)
         show_bearing = st.checkbox("📐 Paparkan Bering & Jarak", value=True)
         
