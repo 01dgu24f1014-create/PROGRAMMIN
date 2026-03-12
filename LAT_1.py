@@ -265,7 +265,6 @@ if uploaded_file is not None and 'df' in locals():
         
         st.markdown("---")
         st.write("**Togol Visualisasi Peta GIS:**")
-        # Checkbox Imej Satelit dibuang kerana Layer Control telah ditambah pada peta
         show_stn = st.checkbox("🏷️ Paparkan Label Stesen", value=True)
         show_bearing = st.checkbox("📐 Paparkan Bering & Jarak", value=True)
         
