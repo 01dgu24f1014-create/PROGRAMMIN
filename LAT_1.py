@@ -6,6 +6,7 @@ import folium
 from streamlit_folium import st_folium
 import plotly.graph_objects as go
 import math
+import time # Modul ditambah untuk fungsi kunci masa (lockout)
 
 # Konfigurasi Halaman (Mesti diletak paling atas)
 st.set_page_config(page_title="Sistem WebGIS Ukur", layout="wide", page_icon="🗺️")
@@ -24,8 +25,28 @@ if 'users_db' not in st.session_state:
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
+# Pembolehubah untuk sistem sekatan (lockout)
+if 'login_attempts' not in st.session_state:
+    st.session_state['login_attempts'] = 0
+
+if 'lockout_time' not in st.session_state:
+    st.session_state['lockout_time'] = 0
+
 if not st.session_state['logged_in']:
     st.title("🔒 Log Masuk Sistem WebGIS")
+    
+    # Semak jika akaun sedang dikunci
+    if st.session_state['login_attempts'] >= 3:
+        time_passed = time.time() - st.session_state['lockout_time']
+        if time_passed < 40:
+            baki_masa = int(40 - time_passed)
+            st.error(f"🚫 Sistem dikunci akibat 3 percubaan gagal. Sila tunggu **{baki_masa} saat** lagi untuk mencuba semula.")
+            time.sleep(1) # Tunggu 1 saat
+            st.rerun()    # Rerun untuk mencipta efek live countdown
+        else:
+            # Reset percubaan selepas 40 saat berlalu
+            st.session_state['login_attempts'] = 0
+            
     st.write("Sila masukkan ID dan Kata Laluan untuk mencari lot dan mengakses paparan.")
     
     with st.form("login_form"):
@@ -34,13 +55,22 @@ if not st.session_state['logged_in']:
         submit_button = st.form_submit_button("Log Masuk")
         
         if submit_button:
-            # Semak dengan database pengguna
-            if user_id in st.session_state['users_db'] and password == st.session_state['users_db'][user_id]['password']:
+            if st.session_state['login_attempts'] >= 3:
+                st.rerun() # Halang submit jika sedang dikunci
+                
+            elif user_id in st.session_state['users_db'] and password == st.session_state['users_db'][user_id]['password']:
                 st.session_state['logged_in'] = True
                 st.session_state['current_user'] = user_id # Simpan ID yang sedang login
+                st.session_state['login_attempts'] = 0     # Reset percubaan jika berjaya
                 st.rerun() 
             else:
-                st.error("Ralat: ID Pengguna atau Kata Laluan tidak sah. Cuba lagi.")
+                st.session_state['login_attempts'] += 1
+                if st.session_state['login_attempts'] >= 3:
+                    st.session_state['lockout_time'] = time.time()
+                    st.rerun()
+                else:
+                    baki_cubaan = 3 - st.session_state['login_attempts']
+                    st.error(f"Ralat: ID Pengguna atau Kata Laluan tidak sah. Baki percubaan anda: {baki_cubaan}")
     
     st.stop()
 
@@ -54,7 +84,8 @@ user_full_name = st.session_state['users_db'][current_user]['name']
 st.sidebar.markdown(f"### 👋 {user_full_name}")
 st.sidebar.markdown("---")
 
-# --- KAWALAN UI ---
+# --- KAWALAN UI DI SIDEBAR ---
+st.sidebar.markdown("### 🎛️ Kawalan Visual")
 saiz_marker = st.sidebar.slider("Saiz Marker Stesen", min_value=1, max_value=50, value=22)
 saiz_font = st.sidebar.slider("Saiz Bearing/Jarak", min_value=5, max_value=30, value=12)
 tahap_zoom = st.sidebar.slider("Tahap Zoom", min_value=10, max_value=24, value=19)
@@ -208,7 +239,6 @@ if uploaded_file is not None and 'df' in locals():
         
         st.markdown("---")
         st.write("**Togol Visualisasi Peta GIS:**")
-        # Checkbox Imej Satelit dibuang kerana Layer Control telah ditambah pada peta
         show_stn = st.checkbox("🏷️ Paparkan Label Stesen", value=True)
         show_bearing = st.checkbox("📐 Paparkan Bering & Jarak", value=True)
         
