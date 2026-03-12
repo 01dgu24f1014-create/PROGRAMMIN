@@ -124,8 +124,8 @@ custom_header = """
 </style>
 
 <div class="header-container">
-    <h1 class="main-title">SISTEM SURVEY LOT</h1>
-    <p class="sub-title">Politeknik Ungku Omar | Jabatan Kejuruteraan Awam</p>
+    <h1 class="main-title">🛰️ PUO WEB-GIS PRO-PLOTTER</h1>
+    <p class="sub-title">Precision Mapping & Visual Healing Experience</p>
     <div class="developer-credit">DEVELOPED BY: MUHAMMAD UMAR BIN ZULKARNAIN</div>
 </div>
 """
