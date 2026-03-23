@@ -12,7 +12,7 @@ import webbrowser
 # ==========================================
 # --- KONFIGURASI HALAMAN DESKTOP ---
 # ==========================================
-ctk.set_appearance_mode("Dark") # Tema gelap seperti header asal awak
+ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 class SistemWebGISDesktop(ctk.CTk):
@@ -21,7 +21,7 @@ class SistemWebGISDesktop(ctk.CTk):
         self.title("Sistem WebGIS Ukur - Desktop Version")
         self.geometry("1100x700")
 
-        # --- SISTEM LOG MASUK (Kekalkan pangkalan data asal) ---
+        # --- SISTEM LOG MASUK ---
         self.users_db = {
             "admin": {"name": "MUHAMMAD UMAR BIN ZULKARNAIN", "password": "12345"},
             "fakhrulis": {"name": "FAKHRULIS", "password": "12345"},
@@ -38,7 +38,7 @@ class SistemWebGISDesktop(ctk.CTk):
 
         self.tunjuk_skrin_login()
 
-    # --- FUNGSI PENGIRAAN BERING & JARAK (Kekal asal) ---
+    # --- FUNGSI PENGIRAAN BERING & JARAK ---
     def kira_bering_jarak(self, e1, n1, e2, n2):
         de = e2 - e1
         dn = n2 - n1
@@ -72,7 +72,6 @@ class SistemWebGISDesktop(ctk.CTk):
         ctk.CTkButton(self.frame_login, text="Log Masuk", command=self.semak_login).pack(pady=20)
 
     def semak_login(self):
-        # Semak jika akaun sedang dikunci (Logik asal dikekalkan)
         if self.login_attempts >= 3:
             time_passed = time.time() - self.lockout_time
             if time_passed < 40:
@@ -80,7 +79,7 @@ class SistemWebGISDesktop(ctk.CTk):
                 messagebox.showerror("Dikunci", f"🚫 Sistem dikunci. Sila tunggu {baki_masa} saat lagi.")
                 return
             else:
-                self.login_attempts = 0 # Reset percubaan
+                self.login_attempts = 0 
 
         user_id = self.entry_id.get()
         password = self.entry_pass.get()
@@ -101,7 +100,7 @@ class SistemWebGISDesktop(ctk.CTk):
                 messagebox.showwarning("Ralat", f"ID atau Kata Laluan tidak sah. Baki percubaan: {baki}")
 
     # ==========================================
-    # --- SKRIN UTAMA (Ganti Streamlit Layout) ---
+    # --- SKRIN UTAMA ---
     # ==========================================
     def tunjuk_skrin_utama(self):
         user_full_name = self.users_db[self.current_user]['name']
@@ -150,7 +149,7 @@ class SistemWebGISDesktop(ctk.CTk):
         self.tunjuk_skrin_login()
 
     # ==========================================
-    # --- PROSES DATA & FOLIUM (Kekal asal) ---
+    # --- PROSES DATA & FOLIUM ---
     # ==========================================
     def muat_naik_csv(self):
         filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
@@ -178,8 +177,6 @@ class SistemWebGISDesktop(ctk.CTk):
             messagebox.showerror("Ralat", f"Ralat membaca fail: {e}")
 
     def jana_folium(self):
-        # Folium tidak boleh render direct dalam CustomTkinter. 
-        # Ia akan generate fail HTML dan buka di browser PC.
         poly_geom = Polygon(zip(self.df['E'], self.df['N']))
         gdf = gpd.GeoDataFrame(index=[0], geometry=[poly_geom], crs=f"EPSG:{self.epsg_code}")
         gdf_wgs84 = gdf.to_crs(epsg=4326)
@@ -189,7 +186,6 @@ class SistemWebGISDesktop(ctk.CTk):
         
         folium.TileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Google Satelit').add_to(m)
 
-        # Masukkan poligon (Sama macam kod asal awak)
         folium.GeoJson(
             gdf_wgs84, 
             style_function=lambda x: {'fillColor': '#A020F0', 'color': 'none', 'fillOpacity': 0.3}
@@ -206,7 +202,6 @@ class SistemWebGISDesktop(ctk.CTk):
                 tooltip=f"Stesen: {stn_name}"
             ).add_to(m)
 
-        # Simpan dan Buka
         laluan_fail = os.path.join(os.getcwd(), "peta_desktop.html")
         m.save(laluan_fail)
         webbrowser.open(f"file://{laluan_fail}")
